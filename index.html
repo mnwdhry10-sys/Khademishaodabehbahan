@@ -431,9 +431,7 @@ footer a{color:#ead79e!important}
   <div id="martyr-search-status" role="status" aria-live="polite" style="margin-top:10px;color:#52675a;font-size:14px">برای جست‌وجو، نام شهید را وارد کنید.</div>
   <div id="martyr-search-results" class="cards" style="margin-top:14px"></div>
 </div>
-
-
-
+<div id="shohada-list" class="cards" aria-live="polite"></div>
 
 </section>
 
@@ -734,7 +732,9 @@ footer a{color:#ead79e!important}
       .select('*').eq('kind', kind).eq('published', true)
       .order('created_at', { ascending: false }).limit(50);
     if (error || !data || !data.length) return;
-    let container = section.querySelector('.cards');
+    let container = kind === 'shohada'
+      ? document.getElementById('shohada-list')
+      : section.querySelector('.cards');
     if (!container) {
       container = document.createElement('div');
       container.className = 'cards';
