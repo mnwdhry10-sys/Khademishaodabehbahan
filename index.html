@@ -423,6 +423,14 @@ footer a{color:#ead79e!important}
 
 <section id="shohada">
 <h2 class="section-title">معرفی شهدای شهرستان بهبهان</h2>
+<div class="card" id="martyr-search-card" style="margin-bottom:20px">
+  <h3 style="margin-bottom:8px">جست‌وجوی شهدا</h3>
+  <p style="margin-top:0">نام یا نام خانوادگی شهید را وارد کنید تا اطلاعات شهدای ثبت‌شده در سایت نمایش داده شود.</p>
+  <label for="martyr-search-input" style="display:block;font-weight:bold;margin-bottom:6px">نام و نام خانوادگی شهید</label>
+  <input id="martyr-search-input" type="search" autocomplete="off" placeholder="مثلاً: مسعود آبرومند" style="width:100%;max-width:560px;padding:12px;border:1px solid #c6a45a;border-radius:8px;font:inherit">
+  <div id="martyr-search-status" role="status" aria-live="polite" style="margin-top:10px;color:#52675a;font-size:14px">برای جست‌وجو، نام شهید را وارد کنید.</div>
+  <div id="martyr-search-results" class="cards" style="margin-top:14px"></div>
+</div>
 
 
 
@@ -751,6 +759,37 @@ footer a{color:#ead79e!important}
     container.innerHTML = '';
     if (data && data.length) renderItems(container, data, 'beforeend');
   }
+  // جست‌وجوی زنده در میان شهدای منتشرشده در پنل مدیریت
+  (async function initMartyrSearch(){
+    const input=document.getElementById('martyr-search-input');
+    const results=document.getElementById('martyr-search-results');
+    const status=document.getElementById('martyr-search-status');
+    if(!input||!results||!status)return;
+    const normalize=value=>String(value||'')
+      .replace(/[يى]/g,'ی').replace(/ك/g,'ک')
+      .replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+      .replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+      .replace(/[\u064B-\u065F\u0670]/g,'')
+      .replace(/\s+/g,' ').trim().toLowerCase();
+    status.textContent='در حال دریافت فهرست شهدا...';
+    const {data,error}=await db.from('site_content').select('*')
+      .eq('kind','shohada').eq('published',true)
+      .order('created_at',{ascending:false}).limit(1000);
+    if(error){status.textContent='دریافت اطلاعات شهدا با خطا روبه‌رو شد. لطفاً بعداً دوباره تلاش کنید.';return;}
+    const martyrs=data||[];
+    status.textContent=martyrs.length
+      ? 'نام شهید موردنظر را جست‌وجو کنید.'
+      : 'هنوز شهیدی در سایت ثبت و منتشر نشده است.';
+    input.addEventListener('input',()=>{
+      const query=normalize(input.value);
+      results.innerHTML='';
+      if(!query){status.textContent='برای جست‌وجو، نام شهید را وارد کنید.';return;}
+      const matches=martyrs.filter(item=>normalize(item.title).includes(query));
+      if(!matches.length){status.textContent='شهیدی با این نام در فهرست منتشرشده پیدا نشد.';return;}
+      status.textContent=matches.length.toLocaleString('fa-IR')+' شهید پیدا شد.';
+      renderItems(results,matches,'beforeend');
+    });
+  })();
   show('news', 'news');
   show('event', 'events');
   show('shohada', 'shohada');
