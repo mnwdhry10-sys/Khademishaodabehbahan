@@ -784,7 +784,11 @@ footer a{color:#ead79e!important}
       const query=normalize(input.value);
       results.innerHTML='';
       if(!query){status.textContent='برای جست‌وجو، نام شهید را وارد کنید.';return;}
-      const terms=query.split(' ').filter(Boolean);\n      const matches=martyrs.filter(item=>{\n        const fullName=normalize(item.title);\n        return terms.every(term=>fullName.includes(term));\n      });
+      const terms=query.split(' ').filter(Boolean);
+      const matches=martyrs.filter(item=>{
+        const fullName=normalize(item.title);
+        return terms.every(term=>fullName.includes(term));
+      });
       if(!matches.length){status.textContent='شهیدی با این نام در فهرست منتشرشده پیدا نشد.';return;}
       status.textContent=matches.length.toLocaleString('fa-IR')+' شهید پیدا شد.';
       renderItems(results,matches,'beforeend');
