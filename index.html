@@ -424,7 +424,7 @@ footer a{color:#ead79e!important}
 <section id="shohada">
 <h2 class="section-title">معرفی شهدای شهرستان بهبهان</h2>
 <div class="card" id="martyr-search-card" style="margin-bottom:20px">
-  <h3 style="margin-bottom:8px">جست‌وجوی شهدا</h3>
+  <h3 style="margin-bottom:8px">جست‌وجوی شهید</h3>
   <p style="margin-top:0">نام یا نام خانوادگی شهید را وارد کنید تا اطلاعات شهدای ثبت‌شده در سایت نمایش داده شود.</p>
   <label for="martyr-search-input" style="display:block;font-weight:bold;margin-bottom:6px">نام و نام خانوادگی شهید</label>
   <input id="martyr-search-input" type="search" autocomplete="off" placeholder="مثلاً: مسعود آبرومند" style="width:100%;max-width:560px;padding:12px;border:1px solid #c6a45a;border-radius:8px;font:inherit">
@@ -784,7 +784,7 @@ footer a{color:#ead79e!important}
       const query=normalize(input.value);
       results.innerHTML='';
       if(!query){status.textContent='برای جست‌وجو، نام شهید را وارد کنید.';return;}
-      const matches=martyrs.filter(item=>normalize(item.title).includes(query));
+      const terms=query.split(' ').filter(Boolean);\n      const matches=martyrs.filter(item=>{\n        const fullName=normalize(item.title);\n        return terms.every(term=>fullName.includes(term));\n      });
       if(!matches.length){status.textContent='شهیدی با این نام در فهرست منتشرشده پیدا نشد.';return;}
       status.textContent=matches.length.toLocaleString('fa-IR')+' شهید پیدا شد.';
       renderItems(results,matches,'beforeend');
