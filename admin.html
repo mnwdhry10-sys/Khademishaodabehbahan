@@ -97,6 +97,23 @@ $('loginBtn').onclick=async(e)=>{e.preventDefault();const btn=$('loginBtn');btn.
 function withBannerTimeout(promise,label){
  return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' بیش از ۶۰ ثانیه طول کشید؛ اتصال اینترنت و تنظیمات Supabase را بررسی کنید.')),60000))]);
 }
+async function diagnoseSupabaseConnection(){
+ const check=async(path)=>{
+  try{
+   const response=await Promise.race([
+    fetch(SUPABASE_URL+path,{method:'GET',headers:{apikey:SUPABASE_KEY}}),
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),8000))
+   ]);
+   return {ok:true,status:response.status};
+  }catch(error){return {ok:false,error:error?.message||String(error)};}
+ };
+ const auth=await check('/auth/v1/health');
+ const storage=await check('/storage/v1/bucket/site-images');
+ if(!auth.ok&&!storage.ok)return 'اتصال مرورگر به سرور پروژه Supabase برقرار نمی‌شود. ممکن است آدرس پروژه، DNS، فیلتر شبکه یا وضعیت پروژه مشکل داشته باشد.';
+ if(auth.ok&&!storage.ok)return 'سرویس ورود Supabase پاسخ می‌دهد، اما سرویس Storage پاسخ نمی‌دهد. وضعیت Storage یا تنظیمات پروژه باید در Supabase بررسی شود.';
+ if(storage.ok)return 'سرور Storage پاسخ می‌دهد (HTTP '+storage.status+'). اگر آپلود همچنان ناموفق است، احتمالاً تنظیمات مخزن یا مجوزهای RLS مانع آپلود هستند.';
+ return 'بخشی از سرویس‌های Supabase پاسخ می‌دهند؛ اتصال Storage را بررسی کنید.';
+}
 async function uploadBannerFile(file){
  if(!file)throw new Error('ابتدا با دکمه انتخاب تصویر یا ویدیو، فایل را انتخاب کنید.');
  const ext=(file.name.split('.').pop()||'').toLowerCase();
@@ -113,7 +130,7 @@ async function uploadBannerFile(file){
  $('bannerStatus').textContent='در حال بارگذاری فایل در فضای ذخیره‌سازی؛ لطفاً صفحه را نبندید...';
  let result;
  try{result=await withBannerTimeout(bucket.upload(name,file,{upsert:false,contentType}),'آپلود فایل بنر');}
- catch(err){if(err?.message==='Failed to fetch')throw new Error('ارتباط با سرور Supabase هنگام بارگذاری فایل برقرار نشد. آدرس پروژه، فعال بودن پروژه و اتصال اینترنت را بررسی کنید.');throw err;}
+ catch(err){if(err?.message==='Failed to fetch'){const diagnosis=await diagnoseSupabaseConnection();throw new Error('ارتباط هنگام آپلود قطع شد. '+diagnosis);}throw err;}
  if(result.error){
   const msg=result.error.message||'';
   if(/bucket.*not found|not found/i.test(msg))throw new Error('مخزن site-images در Supabase ساخته نشده است. فایل supabase-admin-setup.sql باید در SQL Editor اجرا شود.');
