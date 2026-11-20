@@ -111,7 +111,9 @@ async function uploadBannerFile(file){
  const bucket=db.storage.from('site-images');
  const name=Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
  $('bannerStatus').textContent='در حال بارگذاری فایل در فضای ذخیره‌سازی؛ لطفاً صفحه را نبندید...';
- const result=await withBannerTimeout(bucket.upload(name,file,{upsert:false,contentType}),'آپلود فایل بنر');
+ let result;
+ try{result=await withBannerTimeout(bucket.upload(name,file,{upsert:false,contentType}),'آپلود فایل بنر');}
+ catch(err){if(err?.message==='Failed to fetch')throw new Error('ارتباط با سرور Supabase هنگام بارگذاری فایل برقرار نشد. آدرس پروژه، فعال بودن پروژه و اتصال اینترنت را بررسی کنید.');throw err;}
  if(result.error){
   const msg=result.error.message||'';
   if(/bucket.*not found|not found/i.test(msg))throw new Error('مخزن site-images در Supabase ساخته نشده است. فایل supabase-admin-setup.sql باید در SQL Editor اجرا شود.');
@@ -146,7 +148,9 @@ $('bannerForm').onsubmit=async e=>{
   const payload={title:$('bannerTitle').value.trim()||null,image_url:mediaType==='image'?mediaUrl:null,video_url:mediaType==='video'?mediaUrl:null,media_type:mediaType,target_url:$('bannerLink').value.trim()||null,active:$('bannerActive').checked,sort_order:Number($('bannerOrder').value)||0};
   const id=$('bannerId').value;
   const query=id?db.from('site_banners').update(payload).eq('id',id):db.from('site_banners').insert(payload);
-  const result=await withBannerTimeout(query,'ذخیره اطلاعات بنر');
+  let result;
+  try{result=await withBannerTimeout(query,'ذخیره اطلاعات بنر');}
+  catch(err){if(err?.message==='Failed to fetch')throw new Error('فایل بارگذاری شد، اما ارتباط با Supabase برای ثبت اطلاعات بنر برقرار نشد.');throw err;}
   if(result.error)throw result.error;
   $('bannerStatus').textContent='بنر با موفقیت ذخیره شد.';
   clearBannerForm();
