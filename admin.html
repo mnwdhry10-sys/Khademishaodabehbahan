@@ -98,22 +98,29 @@ function withBannerTimeout(promise,label){
  return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(label+' بیش از ۶۰ ثانیه طول کشید؛ اتصال اینترنت و تنظیمات Supabase را بررسی کنید.')),60000))]);
 }
 async function uploadBannerFile(file){
- if(!file)throw new Error('فایلی انتخاب نشده است.');
- const isImage=file.type.startsWith('image/');
- const isVideo=['video/mp4','video/webm'].includes(file.type);
- if(!isImage&&!isVideo)throw new Error('فقط تصویر یا ویدیوی MP4 و WebM مجاز است.');
+ if(!file)throw new Error('ابتدا با دکمه انتخاب تصویر یا ویدیو، فایل را انتخاب کنید.');
+ const ext=(file.name.split('.').pop()||'').toLowerCase();
+ const imageExt=['jpg','jpeg','png','webp','gif'];
+ const videoExt=['mp4','webm'];
+ const isImage=file.type.startsWith('image/')||(!file.type&&imageExt.includes(ext));
+ const isVideo=['video/mp4','video/webm'].includes(file.type)||(!file.type&&videoExt.includes(ext));
+ if(!isImage&&!isVideo)throw new Error('فرمت فایل پشتیبانی نمی‌شود. تصویر JPG، PNG، WEBP یا GIF و ویدیوی MP4 یا WebM انتخاب کنید.');
+ const contentType=file.type||(ext==='jpg'?'image/jpeg':ext==='jpeg'?'image/jpeg':ext==='png'?'image/png':ext==='webp'?'image/webp':ext==='gif'?'image/gif':ext==='mp4'?'video/mp4':'video/webm');
  const maxSize=isVideo?50*1024*1024:5*1024*1024;
  if(file.size>maxSize)throw new Error(isVideo?'حجم ویدیو باید کمتر از ۵۰ مگابایت باشد.':'حجم تصویر باید کمتر از ۵ مگابایت باشد.');
  const bucket=db.storage.from('site-images');
  const name=Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
- const result=await withBannerTimeout(bucket.upload(name,file,{upsert:false,contentType:file.type}),'آپلود فایل بنر');
+ $('bannerStatus').textContent='در حال بارگذاری فایل در فضای ذخیره‌سازی؛ لطفاً صفحه را نبندید...';
+ const result=await withBannerTimeout(bucket.upload(name,file,{upsert:false,contentType}),'آپلود فایل بنر');
  if(result.error){
   const msg=result.error.message||'';
-  if(/bucket.*not found|not found/i.test(msg))throw new Error('مخزن site-images پیدا نشد.');
-  if(/permission|policy|row-level|unauthorized|forbidden/i.test(msg))throw new Error('دسترسی آپلود مدیر در Storage مجاز نیست. سیاست Admins can upload site images را بررسی کنید. جزئیات: '+msg);
-  throw result.error;
+  if(/bucket.*not found|not found/i.test(msg))throw new Error('مخزن site-images در Supabase ساخته نشده است. فایل supabase-admin-setup.sql باید در SQL Editor اجرا شود.');
+  if(/permission|policy|row-level|unauthorized|forbidden/i.test(msg))throw new Error('اجازه بارگذاری فایل برای حساب مدیر فعال نیست. سیاست «Admins can upload site images» در Supabase را بررسی کنید. جزئیات: '+msg);
+  throw new Error('خطای فضای ذخیره‌سازی: '+msg);
  }
- return {url:bucket.getPublicUrl(name).data.publicUrl,mediaType:isVideo?'video':'image'};
+ const publicUrl=bucket.getPublicUrl(name)?.data?.publicUrl;
+ if(!publicUrl)throw new Error('فایل بارگذاری شد اما نشانی عمومی آن ساخته نشد.');
+ return {url:publicUrl,mediaType:isVideo?'video':'image'};
 }
 function clearBannerForm(){$('bannerForm').reset();$('bannerId').value='';$('bannerOrder').value='0';$('bannerActive').checked=true;$('bannerStatus').textContent='آماده ثبت بنر.';}
 async function loadBanners(){
